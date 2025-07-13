@@ -8,11 +8,11 @@
 import SwiftUI
 
 struct SearchCardView: View {
-    let search: Search
+    let search: Media
 
     var body: some View {
         VStack {
-            AsyncImage(url: URL(string: "https://image.tmdb.org/t/p/w500\(search.imagePath ?? "")")) { phase in
+            AsyncImage(url: URL(string: "https://image.tmdb.org/t/p/w500\(search.imagePath)")) { phase in
                 if let image = phase.image {
                     image
                         .resizable()
@@ -25,13 +25,9 @@ struct SearchCardView: View {
                         .cornerRadius(12)
                 }
             }
-            Text(search.displayName ?? "")
+            Text(search.displayName)
                 .font(.headline)
         }
         .padding()
     }
 }
-
-// #Preview {
-//    SearchCardView()
-// }

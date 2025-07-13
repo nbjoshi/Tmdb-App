@@ -11,7 +11,7 @@ struct ShowDetails: Identifiable, Codable {
     let id: Int
     let name: String
     let tagline: String
-    let seasons: [Season]
+    var seasons: [Season]
     let numberOfEpisodes: Int
     let numberOfSeasons: Int
     let overview: String

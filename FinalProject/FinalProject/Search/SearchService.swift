@@ -8,7 +8,7 @@
 import Foundation
 
 class SearchService {
-    func getSearch(query: String) async throws -> SearchResponse {
+    func getSearch(query: String) async throws -> MediaResponse {
         guard let url = URL(string: "https://api.themoviedb.org/3/search/multi") else {
             throw URLError(.badURL)
         }
@@ -32,7 +32,7 @@ class SearchService {
 
         do {
             let (data, _) = try await URLSession.shared.data(for: request)
-            let response: SearchResponse = try JSONDecoder().decode(SearchResponse.self, from: data)
+            let response: MediaResponse = try JSONDecoder().decode(MediaResponse.self, from: data)
             return response
         } catch {
             throw error

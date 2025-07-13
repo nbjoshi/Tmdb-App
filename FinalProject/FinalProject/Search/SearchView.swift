@@ -119,13 +119,10 @@ struct SearchView: View {
                 ScrollView(.vertical) {
                     LazyVStack {
                         ForEach(searchVM.search) { result in
-                            if result.mediaType == "movie" || result.mediaType == "tv" {
+                            if let mediaType = result.mediaType {
                                 SearchCardView(search: result)
-                                    .onTapGesture {
-                                        selectedMedia = SelectedMedia(id: result.id, mediaType: result.mediaType)
+                                    .onTapGesture { selectedMedia = SelectedMedia(id: result.id, mediaType: mediaType)
                                     }
-                            } else {
-                                SearchCardView(search: result)
                             }
                             Divider()
                         }

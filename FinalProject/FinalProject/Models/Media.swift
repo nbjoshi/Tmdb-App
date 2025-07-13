@@ -17,12 +17,18 @@ struct MediaResponse: Codable {
 
 struct Media: Identifiable, Codable {
     let id: Int
+    let mediaType: String?
     let posterPath: String?
+    let profilePath: String?
     let title: String?
     let name: String?
     
     var displayName: String {
-        title ?? name ?? "Unknown"
+        title ?? name ?? ""
+    }
+    
+    var imagePath: String {
+        profilePath ?? posterPath ?? ""
     }
     
     enum CodingKeys: String, CodingKey {
@@ -30,6 +36,8 @@ struct Media: Identifiable, Codable {
         case posterPath = "poster_path"
         case title
         case name
+        case mediaType = "media_type"
+        case profilePath = "profile_path"
     }
 }
 

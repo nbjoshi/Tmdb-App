@@ -10,7 +10,7 @@ import Observation
 
 @Observable
 class SearchViewModel {
-    var search: [Search] = []
+    var search: [Media] = []
     var errorMessage: String? = nil
     private let service = SearchService()
     var query: String = ""
@@ -23,7 +23,7 @@ class SearchViewModel {
         
         do {
             let response = try await service.getSearch(query: query)
-            search = response.results
+            search = response.results ?? []
             errorMessage = nil
         } catch {
             errorMessage = "Failed to make search: \(error)"

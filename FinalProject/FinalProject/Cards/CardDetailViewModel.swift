@@ -36,7 +36,10 @@ class CardDetailViewModel {
     
     func getShowDetails(showId: Int) async {
         do {
-            let response = try await service.getShowDetails(showId: showId)
+            var response = try await service.getShowDetails(showId: showId)
+            if let firstSeason = response.seasons.first, firstSeason.seasonNumber == 0 {
+                response.seasons.removeFirst()
+            }
             showDetails = response
             errorMessage = nil
         } catch {
