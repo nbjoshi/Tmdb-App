@@ -53,3 +53,5 @@ UI Refresh: Redesign key views and navigation to give the app a more distinct lo
 
 Codebase Refinement: Refactor the architecture to improve modularity, reusability, and maintainability, while also adopting SwiftUI best practices throughout the project.
 
+Poster Recognition: Implement image recognition feature so that when users take a picture of a movie or tv show poster, the correct media pops up on the app. 
+
