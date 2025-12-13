@@ -14,7 +14,6 @@ struct FinalProjectApp: App {
 
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            WidgetModel.self,
             RecentSearch.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)

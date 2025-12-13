@@ -121,7 +121,6 @@ struct SearchView: View {
                     }
                 }
             }
-            // Used AI for this!
             .onTapGesture {
                 hideKeyboard()
             }
@@ -160,7 +159,7 @@ struct SearchView: View {
             }
             print("=======================")
         } catch {
-            print("Failed to fetch WidgetModel items: \(error)")
+            print("Failed to fetch SwiftData items: \(error)")
         }
     }
     
@@ -171,9 +170,9 @@ struct SearchView: View {
             for search in searches {
                 modelContext.delete(search)
             }
-            print("✅ Deleted all WidgetModel entries.")
+            print("Deleted all SwiftData entries.")
         } catch {
-            print("Failed to delete WidgetModel items: \(error)")
+            print("Failed to delete SwiftData items: \(error)")
         }
     }
 }
