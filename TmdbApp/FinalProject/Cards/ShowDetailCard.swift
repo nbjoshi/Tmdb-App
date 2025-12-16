@@ -24,12 +24,12 @@ struct ShowDetailCard: View {
     @State private var selectedMedia: SelectedMedia? = nil
     @State private var showTab: ShowTab = .episodes
     @State private var selectedSeason: Season? = nil
-    
+
     var body: some View {
         ZStack(alignment: .topLeading) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    if let show = cardDetailVM.showDetails {
+                    if let show = cardDetailVM.mediaDetails {
                         AsyncImage(url: URL(string: "https://image.tmdb.org/t/p/w500\(show.posterPath)")) { image in
                             image
                                 .resizable()
@@ -38,21 +38,21 @@ struct ShowDetailCard: View {
                             Color.gray
                                 .frame(height: 400)
                         }
-                        
+
                         VStack(alignment: .leading, spacing: 16) {
-                            Text(show.name)
+                            Text(show.displayName)
                                 .font(.title)
                                 .bold()
-                            
+
                             Text(show.overview)
                                 .font(.body)
-                                                        
-                            Text("\(show.firstAirDate.prefix(4)) · \(show.genres.map { $0.name }.joined(separator: ", ")) · TV Show")
+
+                            Text("\((show.dateString ?? "").prefix(4)) · \(show.genres.map { $0.name }.joined(separator: ", ")) · \(show.mediaType.displayName)")
                                 .font(.footnote)
                                 .foregroundColor(.secondary)
-                            
+
                             StarRatingView(rating: show.voteAverage)
-                            
+
                             if isLoggedIn {
                                 HStack {
                                     Button {
@@ -60,7 +60,7 @@ struct ShowDetailCard: View {
                                             withAnimation {
                                                 cardDetailVM.isFavorited.toggle()
                                             }
-                                            await cardDetailVM.markAsFavorite(accountId: accountId, sessionId: sessionId, mediaType: "tv", mediaId: trendingId, favorite: cardDetailVM.isFavorited)
+                                            await cardDetailVM.markAsFavorite(accountId: accountId, sessionId: sessionId, mediaType: .tv, mediaId: trendingId, favorite: cardDetailVM.isFavorited)
                                         }
                                     } label: {
                                         VStack {
@@ -74,7 +74,7 @@ struct ShowDetailCard: View {
                                             withAnimation {
                                                 cardDetailVM.isWatchlisted.toggle()
                                             }
-                                            await cardDetailVM.markAsWatchlist(accountId: accountId, sessionId: sessionId, mediaType: "tv", mediaId: trendingId, watchlist: cardDetailVM.isWatchlisted)
+                                            await cardDetailVM.markAsWatchlist(accountId: accountId, sessionId: sessionId, mediaType: .tv, mediaId: trendingId, watchlist: cardDetailVM.isWatchlisted)
                                         }
                                     } label: {
                                         VStack {
@@ -86,7 +86,7 @@ struct ShowDetailCard: View {
                                 .padding(.vertical)
                             }
                             Divider()
-                            
+
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 10) {
                                     Button(action: { showTab = .episodes }) {
@@ -136,7 +136,7 @@ struct ShowDetailCard: View {
 
                             if showTab == .episodes {
                                 Menu {
-                                    ForEach(show.seasons) { season in
+                                    ForEach(show.seasons ?? []) { season in
                                         Button(action: {
                                             selectedSeason = season
                                             Task {
@@ -157,7 +157,7 @@ struct ShowDetailCard: View {
                                     }
                                     .background(Color.clear)
                                 }
-                                
+
                                 if let episodes = cardDetailVM.seasonEpisodes {
                                     LazyVStack(alignment: .leading, spacing: 40) {
                                         ForEach(episodes) { episode in
@@ -199,12 +199,12 @@ struct ShowDetailCard: View {
                                     }
                                 }
                             }
-                            
+
                             if showTab == .similar {
                                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                                    ForEach(cardDetailVM.similarShows) { similarShow in
+                                    ForEach(cardDetailVM.similarMedia) { media in
                                         VStack {
-                                            AsyncImage(url: URL(string: "https://image.tmdb.org/t/p/w500\(similarShow.posterPath ?? "")")) { image in
+                                            AsyncImage(url: URL(string: "https://image.tmdb.org/t/p/w500\(media.posterPath ?? "")")) { image in
                                                 image
                                                     .resizable()
                                                     .aspectRatio(contentMode: .fit)
@@ -217,8 +217,8 @@ struct ShowDetailCard: View {
                                                     .cornerRadius(12)
                                                     .clipped()
                                             }
-                                            
-                                            Text(similarShow.name)
+
+                                            Text(media.displayName)
                                                 .font(.caption)
                                                 .multilineTextAlignment(.center)
                                                 .lineLimit(2)
@@ -226,23 +226,23 @@ struct ShowDetailCard: View {
                                         .padding()
                                         .cornerRadius(12)
                                         .onTapGesture {
-                                            selectedMedia = SelectedMedia(id: similarShow.id, mediaType: "tv")
+                                            selectedMedia = SelectedMedia(id: media.id, mediaType: media.mediaType.rawValue)
                                         }
                                     }
                                 }
                             }
-                            
+
                             if showTab == .reviews {
                                 LazyVStack(alignment: .leading) {
-                                    ForEach(cardDetailVM.showReviews) { review in
+                                    ForEach(cardDetailVM.reviews) { review in
                                         ReviewView(review: review)
                                     }
                                 }
                             }
-                            
+
                             if showTab == .extras {
                                 LazyVStack(alignment: .leading) {
-                                    ForEach(cardDetailVM.showVideos) { video in
+                                    ForEach(cardDetailVM.videos) { video in
                                         VideoView(video: video)
                                         Divider()
                                     }
@@ -250,7 +250,7 @@ struct ShowDetailCard: View {
                             }
                         }
                         .padding()
-                        
+
                     } else if let errorMessage = cardDetailVM.errorMessage {
                         Text(errorMessage)
                             .foregroundColor(.red)
@@ -258,7 +258,7 @@ struct ShowDetailCard: View {
                     }
                 }
             }
-            
+
             Button(action: {
                 dismiss()
             }) {
@@ -275,8 +275,8 @@ struct ShowDetailCard: View {
             await cardDetailVM.getSimilarShows(showId: trendingId)
             await cardDetailVM.getShowState(showId: trendingId, sessionId: sessionId)
             await cardDetailVM.getShowReviews(showId: trendingId)
-            await cardDetailVM.getVideos(mediaId: trendingId, mediaType: "tv")
-            if let firstSeason = cardDetailVM.showDetails?.seasons.first {
+            await cardDetailVM.getVideos(mediaId: trendingId, mediaType: .tv)
+            if let firstSeason = cardDetailVM.mediaDetails?.seasons?.first {
                 selectedSeason = firstSeason
                 await cardDetailVM.getSeasonDetails(showId: trendingId, seasonNumber: firstSeason.seasonNumber)
             }

@@ -22,12 +22,12 @@ struct MovieDetailCard: View {
     @State private var cardDetailVM = CardDetailViewModel()
     @State private var selectedMedia: SelectedMedia? = nil
     @State private var movieTab: MovieTab = .similar
-    
+
     var body: some View {
         ZStack(alignment: .topLeading) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    if let movie = cardDetailVM.movieDetails {
+                    if let movie = cardDetailVM.mediaDetails {
                         AsyncImage(url: URL(string: "https://image.tmdb.org/t/p/w500\(movie.posterPath)")) { image in
                             image
                                 .resizable()
@@ -36,21 +36,21 @@ struct MovieDetailCard: View {
                             Color.gray
                                 .frame(height: 400)
                         }
-                        
+
                         VStack(alignment: .leading, spacing: 16) {
-                            Text(movie.title)
+                            Text(movie.displayName)
                                 .font(.title)
                                 .bold()
-                            
+
                             Text(movie.overview)
                                 .font(.body)
-                            
-                            Text("\(movie.releaseDate.prefix(4)) · \(movie.genres.map { $0.name }.joined(separator: ", ")) · Movie")
+
+                            Text("\((movie.dateString ?? "").prefix(4)) · \(movie.genres.map { $0.name }.joined(separator: ", ")) · \(movie.mediaType.displayName)")
                                 .font(.callout)
                                 .foregroundColor(.secondary)
-                            
+
                             StarRatingView(rating: movie.voteAverage)
-                            
+
                             if isLoggedIn {
                                 HStack {
                                     Button {
@@ -58,7 +58,7 @@ struct MovieDetailCard: View {
                                             withAnimation {
                                                 cardDetailVM.isFavorited.toggle()
                                             }
-                                            await cardDetailVM.markAsFavorite(accountId: accountId, sessionId: sessionId, mediaType: "movie", mediaId: trendingId, favorite: cardDetailVM.isFavorited)
+                                            await cardDetailVM.markAsFavorite(accountId: accountId, sessionId: sessionId, mediaType: .movie, mediaId: trendingId, favorite: cardDetailVM.isFavorited)
                                         }
                                     } label: {
                                         VStack {
@@ -72,7 +72,7 @@ struct MovieDetailCard: View {
                                             withAnimation {
                                                 cardDetailVM.isWatchlisted.toggle()
                                             }
-                                            await cardDetailVM.markAsWatchlist(accountId: accountId, sessionId: sessionId, mediaType: "movie", mediaId: trendingId, watchlist: cardDetailVM.isWatchlisted)
+                                            await cardDetailVM.markAsWatchlist(accountId: accountId, sessionId: sessionId, mediaType: .movie, mediaId: trendingId, watchlist: cardDetailVM.isWatchlisted)
                                         }
                                     } label: {
                                         VStack {
@@ -84,7 +84,7 @@ struct MovieDetailCard: View {
                                 .padding(.vertical)
                             }
                             Divider()
-                            
+
                             HStack(spacing: 10) {
                                 Button(action: { movieTab = .similar }) {
                                     Text("Similar")
@@ -119,12 +119,12 @@ struct MovieDetailCard: View {
                             }
                             .padding(.vertical)
                             .animation(.easeInOut(duration: 0.2), value: movieTab)
-                            
+
                             if movieTab == .similar {
                                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                                    ForEach(cardDetailVM.similarMovies) { movie in
+                                    ForEach(cardDetailVM.similarMedia) { media in
                                         VStack {
-                                            if let posterPath = movie.posterPath {
+                                            if let posterPath = media.posterPath {
                                                 AsyncImage(url: URL(string: "https://image.tmdb.org/t/p/w500\(posterPath)")) { image in
                                                     image
                                                         .resizable()
@@ -141,8 +141,8 @@ struct MovieDetailCard: View {
                                                     .frame(height: 180)
                                                     .cornerRadius(12)
                                             }
-                                            
-                                            Text(movie.title)
+
+                                            Text(media.displayName)
                                                 .font(.callout)
                                                 .fontWeight(.bold)
                                                 .multilineTextAlignment(.center)
@@ -150,23 +150,23 @@ struct MovieDetailCard: View {
                                         }
                                         .padding()
                                         .onTapGesture {
-                                            selectedMedia = SelectedMedia(id: movie.id, mediaType: "movie")
+                                            selectedMedia = SelectedMedia(id: media.id, mediaType: media.mediaType.rawValue)
                                         }
                                     }
                                 }
                             }
-                            
+
                             if movieTab == .reviews {
                                 LazyVStack(alignment: .leading) {
-                                    ForEach(cardDetailVM.movieReviews) { review in
+                                    ForEach(cardDetailVM.reviews) { review in
                                         ReviewView(review: review)
                                     }
                                 }
                             }
-                            
+
                             if movieTab == .extras {
                                 LazyVStack(alignment: .leading) {
-                                    ForEach(cardDetailVM.movieVideos) { video in
+                                    ForEach(cardDetailVM.videos) { video in
                                         VideoView(video: video)
                                         Divider()
                                     }
@@ -177,7 +177,7 @@ struct MovieDetailCard: View {
                     }
                 }
             }
-            
+
             Button(action: {
                 dismiss()
             }) {
@@ -194,7 +194,7 @@ struct MovieDetailCard: View {
             await cardDetailVM.getSimilarMovies(movieId: trendingId)
             await cardDetailVM.getMovieState(movieId: trendingId, sessionId: sessionId)
             await cardDetailVM.getMovieReviews(movieId: trendingId)
-            await cardDetailVM.getVideos(mediaId: trendingId, mediaType: "movie")
+            await cardDetailVM.getVideos(mediaId: trendingId, mediaType: .movie)
         }
         .refreshable {
             await cardDetailVM.getMovieDetails(movieId: trendingId)
@@ -204,8 +204,7 @@ struct MovieDetailCard: View {
         .sheet(item: $selectedMedia) { media in
             if media.mediaType == "movie" {
                 MovieDetailCard(trendingId: media.id, sessionId: sessionId, accountId: accountId, isLoggedIn: isLoggedIn)
-            }
-            else if media.mediaType == "tv" {
+            } else if media.mediaType == "tv" {
                 ShowDetailCard(trendingId: media.id, sessionId: sessionId, accountId: accountId, isLoggedIn: isLoggedIn)
             }
         }

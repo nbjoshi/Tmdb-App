@@ -12,7 +12,7 @@ import SwiftData
 final class RecentSearch {
     var query: String
     var timestamp: Date
-    
+
     init(query: String, timestamp: Date = .now) {
         self.query = query
         self.timestamp = timestamp

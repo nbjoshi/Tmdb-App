@@ -9,7 +9,7 @@ import SwiftUI
 
 struct ReviewView: View {
     let review: Review
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             HStack(alignment: .center, spacing: 12) {
@@ -58,12 +58,12 @@ struct ReviewView: View {
             return "https://image.tmdb.org/t/p/w500\(path)"
         }
     }
-    
+
     // Used AI to help me format the date
     private func formatDate(_ dateString: String) -> String {
         let isoFormatter = ISO8601DateFormatter()
         isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        
+
         if let date = isoFormatter.date(from: dateString) {
             let formatter = DateFormatter()
             formatter.dateFormat = "MM/dd/yyyy"

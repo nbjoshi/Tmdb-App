@@ -8,41 +8,95 @@
 import Foundation
 import Observation
 
+/// ViewModel for Favorites following clean MVVM architecture
 @Observable
-class FavoritesViewModel {
-    private let service = FavoritesService()
-    var errorMessage: String? = nil
-    var favoriteMovies: [FavoriteMovie] = []
-    var favoriteShows: [FavoriteShow] = []
-    
-    func addToFavorite(mediaType: String, mediaId: Int, accountId: Int, sessionId: String) async {
-        do {
-            let response: FavoritesResponse = try await service.addToFavorite(mediaType: mediaType, mediaId: mediaId, accountId: accountId, sessionId: sessionId)
-            if response.statusMessage == "Success." {
-                errorMessage = nil
-            }
-        } catch {
-            errorMessage = error.localizedDescription
-        }
+final class FavoritesViewModel {
+    // MARK: - Published Properties
+
+    private(set) var favoriteMovies: [FavoriteMedia] = []
+    private(set) var favoriteShows: [FavoriteMedia] = []
+    private(set) var isLoading = false
+    private(set) var errorMessage: String?
+
+    // MARK: - Dependencies
+
+    private let service: FavoritesService
+
+    // MARK: - Initialization
+
+    init(service: FavoritesService = FavoritesService()) {
+        self.service = service
     }
-    
-    func getFavoriteMovies(accountId: Int, sessionId: String) async {
+
+    // MARK: - Public Methods
+
+    @MainActor
+    func addToFavorites(
+        mediaType: MediaType,
+        mediaId: Int,
+        accountId: Int,
+        sessionId: String
+    ) async -> Bool {
         do {
-            let response: FavoriteMoviesResponse = try await service.getFavoriteMovies(accountId: accountId, sessionId: sessionId)
-            favoriteMovies = response.results
-            errorMessage = nil
+            let response = try await service.addToFavorite(
+                mediaType: mediaType,
+                mediaId: mediaId,
+                accountId: accountId,
+                sessionId: sessionId
+            )
+            errorMessage = response.statusMessage == "Success." ? nil : response.statusMessage
+            return response.statusMessage == "Success."
         } catch {
             errorMessage = error.localizedDescription
+            return false
         }
     }
 
-    func getFavoriteShows(accountId: Int, sessionId: String) async {
+    @MainActor
+    func fetchFavoriteMovies(accountId: Int, sessionId: String) async {
+        isLoading = true
+        errorMessage = nil
+
+        defer { isLoading = false }
+
         do {
-            let response: FavoriteShowsResponse = try await service.getFavoriteShows(accountId: accountId, sessionId: sessionId)
-            favoriteShows = response.results
-            errorMessage = nil
+            let response = try await service.getFavoriteMovies(
+                accountId: accountId,
+                sessionId: sessionId
+            )
+            favoriteMovies = response.results
         } catch {
             errorMessage = error.localizedDescription
+            favoriteMovies = []
         }
+    }
+
+    @MainActor
+    func fetchFavoriteShows(accountId: Int, sessionId: String) async {
+        isLoading = true
+        errorMessage = nil
+
+        defer { isLoading = false }
+
+        do {
+            let response = try await service.getFavoriteShows(
+                accountId: accountId,
+                sessionId: sessionId
+            )
+            favoriteShows = response.results
+        } catch {
+            errorMessage = error.localizedDescription
+            favoriteShows = []
+        }
+    }
+
+    // MARK: - Computed Properties
+
+    var hasMovies: Bool {
+        !favoriteMovies.isEmpty
+    }
+
+    var hasShows: Bool {
+        !favoriteShows.isEmpty
     }
 }

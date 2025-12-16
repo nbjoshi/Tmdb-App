@@ -35,21 +35,21 @@ struct SearchView: View {
                                 .textFieldStyle(.plain)
                                 .focused($isTextFieldFocused)
                                 .cornerRadius(12)
-                                .onChange(of: isTextFieldFocused) { oldValue, newValue in
+                                .onChange(of: isTextFieldFocused) { _, newValue in
                                     hasCancel = newValue
                                 }
                                 .onSubmit {
                                     if searchQuery.isEmpty {
-                                        searchVM.search = []
+                                        searchVM.clearSearch()
                                         return
                                     }
-                                    
+
                                     let recentSearch = RecentSearch(query: searchQuery)
                                     modelContext.insert(recentSearch)
-                                    
+
                                     searchVM.query = searchQuery
                                     hideKeyboard()
-                                    
+
                                     Task {
                                         await searchVM.getSearch()
                                     }
@@ -57,12 +57,12 @@ struct SearchView: View {
                         }
                         .cornerRadius(12)
                     }
-                    
+
                     if hasCancel && !searchQuery.isEmpty {
                         Button(action: {
                             searchQuery = ""
                             searchVM.query = searchQuery
-                            searchVM.search = []
+                            searchVM.clearSearch()
                             hideKeyboard()
                             isTextFieldFocused = false
                         }) {
@@ -73,13 +73,13 @@ struct SearchView: View {
                     }
                 }
                 .padding()
-                
+
                 if searchQuery.isEmpty && searchVM.search.isEmpty {
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 12) {
                             Text("Recent Searches")
                                 .font(.headline)
-                            
+
                             ForEach(recentSearches.prefix(5)) { recent in
                                 Button(action: {
                                     searchQuery = recent.query
@@ -94,7 +94,7 @@ struct SearchView: View {
                                             .resizable()
                                             .scaledToFit()
                                             .frame(width: 20, height: 20)
-                                        
+
                                         Text(recent.query)
                                     }
                                     .foregroundStyle(.secondary)
@@ -104,14 +104,14 @@ struct SearchView: View {
                     }
                     .padding(.horizontal)
                 }
-            
+
                 ScrollView(.vertical) {
                     LazyVStack {
                         ForEach(searchVM.search) { result in
-                            if result.mediaType == "movie" || result.mediaType == "tv" {
+                            if result.mediaType == .movie || result.mediaType == .tv {
                                 SearchCardView(search: result)
                                     .onTapGesture {
-                                        selectedMedia = SelectedMedia(id: result.id, mediaType: result.mediaType)
+                                        selectedMedia = SelectedMedia(id: result.id, mediaType: result.mediaType.rawValue)
                                     }
                             } else {
                                 SearchCardView(search: result)
@@ -132,8 +132,7 @@ struct SearchView: View {
                         accountId: profileVM.profile?.id ?? 0,
                         isLoggedIn: profileVM.isLoggedIn,
                     )
-                }
-                else if media.mediaType == "tv" {
+                } else if media.mediaType == "tv" {
                     ShowDetailCard(
                         trendingId: media.id,
                         sessionId: profileVM.session ?? "",
@@ -162,7 +161,7 @@ struct SearchView: View {
             print("Failed to fetch SwiftData items: \(error)")
         }
     }
-    
+
     private func deleteAllItemsInSwiftData() {
         let fetchDescriptor = FetchDescriptor<RecentSearch>()
         do {
@@ -174,13 +173,6 @@ struct SearchView: View {
         } catch {
             print("Failed to delete SwiftData items: \(error)")
         }
-    }
-}
-
-// Used AI for this!
-extension View {
-    func hideKeyboard() {
-        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }
 

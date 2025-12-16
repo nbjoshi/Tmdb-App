@@ -7,44 +7,14 @@
 
 import Foundation
 
+/// Response wrapper for trending content
 struct TrendingResponse: Codable {
-    let results: [Trending]
+    let results: [Media]
 
     enum CodingKeys: String, CodingKey {
         case results
     }
 }
 
-struct Trending: Identifiable, Codable {
-    let id: Int
-    let mediaType: String
-    let posterPath: String?
-    let profilePath: String?
-    
-    // Movie-specific
-    let title: String?
-
-    // TV/People-specific
-    let name: String?
-        
-    var imagePath: String? {
-        if mediaType == "person" {
-            return profilePath
-        } else {
-            return posterPath
-        }
-    }
-    
-    var displayName: String? {
-        return title ?? name ?? nil
-    }
-    
-    enum CodingKeys: String, CodingKey {
-        case id
-        case mediaType = "media_type"
-        case posterPath = "poster_path"
-        case profilePath = "profile_path"
-        case title
-        case name
-    }
-}
+/// Type alias for trending media items
+typealias Trending = Media

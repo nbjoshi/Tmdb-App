@@ -10,18 +10,18 @@ import SwiftUI
 import WidgetKit
 
 struct Provider: TimelineProvider {
-    func placeholder(in context: Context) -> SimpleEntry {
+    func placeholder(in _: Context) -> SimpleEntry {
         SimpleEntry(date: Date(), emoji: "😀")
     }
 
-    func getSnapshot(in context: Context, completion: @escaping (SimpleEntry) -> Void) {
+    func getSnapshot(in _: Context, completion: @escaping (SimpleEntry) -> Void) {
         let entry = SimpleEntry(date: Date(), emoji: "😀")
         completion(entry)
     }
 
-    func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> Void) {
+    func getTimeline(in _: Context, completion: @escaping (Timeline<Entry>) -> Void) {
         let entry = SimpleEntry(date: Date(), emoji: "🙂")
-        
+
         let timeline = Timeline(entries: [entry], policy: .atEnd)
         completion(timeline)
     }
@@ -66,7 +66,7 @@ struct FinalProjectWidgetEntryView: View {
                             .font(.subheadline)
                             .bold()
                             .foregroundStyle(.primary)
-                        
+
                         Divider()
 
                         if let first = items.first {
@@ -74,7 +74,7 @@ struct FinalProjectWidgetEntryView: View {
                                 Image(systemName: "play.rectangle.fill")
                                     .resizable()
                                     .frame(width: 12, height: 12)
-                                
+
                                 Text(first.displayName ?? "Unknown")
                                     .font(.caption)
                                     .lineLimit(1)
@@ -102,13 +102,13 @@ struct FinalProjectWidgetEntryView: View {
                                 Image(systemName: "play.rectangle.fill")
                                     .resizable()
                                     .frame(width: 14, height: 14)
-                                
+
                                 Text(item.displayName ?? "Unknown")
                                     .font(.callout)
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.7)
                                     .foregroundStyle(.primary)
-                                
+
                                 Text("(\(item.mediaType))")
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
@@ -132,13 +132,13 @@ struct FinalProjectWidgetEntryView: View {
                                 Image(systemName: "play.rectangle.fill")
                                     .resizable()
                                     .frame(width: 16, height: 16)
-                                
+
                                 Text(item.displayName ?? "Unknown")
                                     .font(.callout)
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.7)
                                     .foregroundStyle(.primary)
-                                
+
                                 Text("(\(item.mediaType))")
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)

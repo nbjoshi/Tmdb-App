@@ -21,7 +21,7 @@ struct Episode: Codable, Identifiable {
     let runtime: Int
     let seasonNumber: Int
     let stillPath: String?
-    
+
     enum CodingKeys: String, CodingKey {
         case airDate = "air_date"
         case episodeNumber = "episode_number"

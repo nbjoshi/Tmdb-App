@@ -10,9 +10,9 @@ import Foundation
 struct SessionIdResponse: Codable {
     let success: Bool
     let sessionId: String
-    
+
     enum CodingKeys: String, CodingKey {
-        case success = "success"
+        case success
         case sessionId = "session_id"
     }
 }

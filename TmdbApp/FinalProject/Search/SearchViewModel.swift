@@ -9,24 +9,43 @@ import Foundation
 import Observation
 
 @Observable
-class SearchViewModel {
-    var search: [Search] = []
-    var errorMessage: String? = nil
-    private let service = SearchService()
+final class SearchViewModel {
+    private(set) var search: [Media] = []
+    private(set) var isLoading = false
+    private(set) var errorMessage: String?
     var query: String = ""
+
+    private let service: SearchService
+
+    init(service: SearchService = SearchService()) {
+        self.service = service
+    }
+
     var isQueryValid: Bool { !query.isEmpty }
-    
+
+    @MainActor
     func getSearch() async {
-        if !isQueryValid {
+        guard isQueryValid else {
+            search = []
             return
         }
-        
+
+        isLoading = true
+        errorMessage = nil
+
+        defer { isLoading = false }
+
         do {
             let response = try await service.getSearch(query: query)
             search = response.results
-            errorMessage = nil
         } catch {
-            errorMessage = "Failed to make search: \(error)"
+            errorMessage = "Failed to make search: \(error.localizedDescription)"
+            search = []
         }
+    }
+
+    func clearSearch() {
+        search = []
+        errorMessage = nil
     }
 }

@@ -8,7 +8,7 @@
 import Foundation
 
 class WatchlistService {
-    func getWatchlistMovies(accountId: Int, sessionId: String) async throws -> WatchlistMoviesResponse {
+    func getWatchlistMovies(accountId: Int, sessionId: String) async throws -> WatchlistMediaResponse {
         guard let url = URL(string: "https://api.themoviedb.org/3/account/\(accountId)/watchlist/movies") else {
             throw URLError(.badURL)
         }
@@ -31,14 +31,14 @@ class WatchlistService {
         ]
         do {
             let (data, _) = try await URLSession.shared.data(for: request)
-            let response: WatchlistMoviesResponse = try JSONDecoder().decode(WatchlistMoviesResponse.self, from: data)
+            let response: WatchlistMediaResponse = try JSONDecoder().decode(WatchlistMediaResponse.self, from: data)
             return response
         } catch {
             throw error
         }
     }
-    
-    func getWatchlistShows(accountId: Int, sessionId: String) async throws -> WatchlistShowsResponse {
+
+    func getWatchlistShows(accountId: Int, sessionId: String) async throws -> WatchlistMediaResponse {
         guard let url = URL(string: "https://api.themoviedb.org/3/account/\(accountId)/watchlist/tv") else {
             throw URLError(.badURL)
         }
@@ -62,7 +62,7 @@ class WatchlistService {
 
         do {
             let (data, _) = try await URLSession.shared.data(for: request)
-            let response: WatchlistShowsResponse = try JSONDecoder().decode(WatchlistShowsResponse.self, from: data)
+            let response: WatchlistMediaResponse = try JSONDecoder().decode(WatchlistMediaResponse.self, from: data)
             return response
         } catch {
             throw error

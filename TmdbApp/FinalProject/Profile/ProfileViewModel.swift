@@ -17,7 +17,7 @@ class ProfileViewModel: ObservableObject {
     @Published var errorMessage: String? = nil
     @Published var profile: Profile? = nil
     @Published var isLoggedIn: Bool = false
-        
+
     func createRequestToken() async {
         do {
             let response = try await service.createRequestToken()
@@ -31,7 +31,7 @@ class ProfileViewModel: ObservableObject {
             errorMessage = "Failed to create request token: \(error)"
         }
     }
-    
+
     func validateRequestToken(username: String, password: String, requestToken: String) async {
         do {
             let response = try await service.validateRequestToken(username: username, password: password, requestToken: requestToken)
@@ -45,7 +45,7 @@ class ProfileViewModel: ObservableObject {
             errorMessage = "Failed to validate request token: \(error)"
         }
     }
-    
+
     func createSession(requestToken: String) async {
         do {
             let response = try await service.createSession(requestToken: requestToken)
@@ -59,7 +59,7 @@ class ProfileViewModel: ObservableObject {
             errorMessage = "Failed to create session: \(error)"
         }
     }
-    
+
     func deleteSession(sessionId: String) async {
         do {
             let response = try await service.deleteSession(sessionId: sessionId)
@@ -72,7 +72,7 @@ class ProfileViewModel: ObservableObject {
             errorMessage = "Failed to delete session: \(error)"
         }
     }
-    
+
     func getProfile(sessionId: String) async {
         do {
             let response = try await service.getProfile(sessionId: sessionId)
@@ -83,17 +83,17 @@ class ProfileViewModel: ObservableObject {
             errorMessage = "Failed to get profile: \(error)"
         }
     }
-    
+
     // Source: https://medium.com/@ranga.c222/how-to-save-sensitive-data-in-keychain-in-ios-using-swift-c839d0e98f9d
-    func saveSession(username: String, sessionId: String) {
+    func saveSession(username _: String, sessionId: String) {
         let sessionData = sessionId.data(using: .utf8)!
-        
+
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: "tmdb_session_id",
             kSecValueData as String: sessionData,
         ]
-        
+
         SecItemDelete(query as CFDictionary)
 
         let status = SecItemAdd(query as CFDictionary, nil)
@@ -103,7 +103,7 @@ class ProfileViewModel: ObservableObject {
             errorMessage = nil
         }
     }
-    
+
     func loadSession() {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -111,10 +111,10 @@ class ProfileViewModel: ObservableObject {
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne,
         ]
-        
+
         var item: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &item)
-        
+
         if status == errSecSuccess, let data = item as? Data {
             if let sessionId = String(data: data, encoding: .utf8) {
                 session = sessionId
@@ -123,15 +123,15 @@ class ProfileViewModel: ObservableObject {
             errorMessage = "Failed to load session: \(status)"
         }
     }
-    
+
     func removeSession() {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: "tmdb_session_id",
         ]
-        
+
         let status = SecItemDelete(query as CFDictionary)
-                
+
         if status == errSecSuccess {
             print("Successfully deleted sessionId from Keychain")
             errorMessage = nil
@@ -143,7 +143,7 @@ class ProfileViewModel: ObservableObject {
             errorMessage = "Failed to delete session from Keychain: \(status)"
         }
     }
-    
+
     func logout() async {
         if let sessionId = session {
             await deleteSession(sessionId: sessionId)

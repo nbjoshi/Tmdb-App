@@ -8,34 +8,73 @@
 import Foundation
 import Observation
 
+/// ViewModel for Watchlist following clean MVVM architecture
 @Observable
-class WatchlistViewModel {
-    private let service = WatchlistService()
-    var errorMessage: String? = nil
-    var watchlistMovies: [WatchlistMovie] = []
-    var watchlistShows: [WatchlistShow] = []
-    
-    func getWatchlistMovies(accountId: Int, sessionId: String) async {
+final class WatchlistViewModel {
+    // MARK: - Published Properties
+
+    private(set) var watchlistMovies: [WatchlistMedia] = []
+    private(set) var watchlistShows: [WatchlistMedia] = []
+    private(set) var isLoading = false
+    private(set) var errorMessage: String?
+
+    // MARK: - Dependencies
+
+    private let service: WatchlistService
+
+    // MARK: - Initialization
+
+    init(service: WatchlistService = WatchlistService()) {
+        self.service = service
+    }
+
+    // MARK: - Public Methods
+
+    @MainActor
+    func fetchWatchlistMovies(accountId: Int, sessionId: String) async {
+        isLoading = true
+        errorMessage = nil
+
+        defer { isLoading = false }
+
         do {
-            let response = try await service.getWatchlistMovies(accountId: accountId, sessionId: sessionId)
-            if let movies = response.results {
-                watchlistMovies = movies
-            }
-            errorMessage = nil
+            let response = try await service.getWatchlistMovies(
+                accountId: accountId,
+                sessionId: sessionId
+            )
+            watchlistMovies = response.results ?? []
         } catch {
-            errorMessage = "Couldn't retrieve watchlisted movies"
+            errorMessage = "Couldn't retrieve watchlisted movies: \(error.localizedDescription)"
+            watchlistMovies = []
         }
     }
-    
-    func getWatchlistShows(accountId: Int, sessionId: String) async {
+
+    @MainActor
+    func fetchWatchlistShows(accountId: Int, sessionId: String) async {
+        isLoading = true
+        errorMessage = nil
+
+        defer { isLoading = false }
+
         do {
-            let response = try await service.getWatchlistShows(accountId: accountId, sessionId: sessionId)
-            if let shows = response.results {
-                watchlistShows = shows
-            }
-            errorMessage = nil
+            let response = try await service.getWatchlistShows(
+                accountId: accountId,
+                sessionId: sessionId
+            )
+            watchlistShows = response.results ?? []
         } catch {
-            errorMessage = "Couldn't retrieve watchlisted shows"
+            errorMessage = "Couldn't retrieve watchlisted shows: \(error.localizedDescription)"
+            watchlistShows = []
         }
+    }
+
+    // MARK: - Computed Properties
+
+    var hasMovies: Bool {
+        !watchlistMovies.isEmpty
+    }
+
+    var hasShows: Bool {
+        !watchlistShows.isEmpty
     }
 }

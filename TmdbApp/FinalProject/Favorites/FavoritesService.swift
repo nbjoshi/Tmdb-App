@@ -8,25 +8,25 @@
 import Foundation
 
 class FavoritesService {
-    func addToFavorite(mediaType: String, mediaId: Int, accountId: Int, sessionId: String) async throws -> FavoritesResponse {
+    func addToFavorite(mediaType: MediaType, mediaId: Int, accountId: Int, sessionId: String) async throws -> FavoritesResponse {
         let parameters = [
-            "media_type": mediaType,
+            "media_type": mediaType.rawValue,
             "media_id": mediaId,
             "favorite": true,
         ] as [String: Any?]
-        
+
         let postData = try JSONSerialization.data(withJSONObject: parameters, options: [])
 
         guard let url = URL(string: "https://api.themoviedb.org/3/account/\(accountId)/favorite") else {
             throw URLError(.badURL)
         }
-        
+
         var components = URLComponents(url: url, resolvingAgainstBaseURL: true)!
         let queryItems: [URLQueryItem] = [
             URLQueryItem(name: "session_id", value: sessionId),
         ]
         components.queryItems = components.queryItems.map { $0 + queryItems } ?? queryItems
-        
+
         var request = URLRequest(url: components.url!)
         request.httpMethod = "POST"
         request.timeoutInterval = 10
@@ -45,12 +45,12 @@ class FavoritesService {
             throw error
         }
     }
-    
-    func getFavoriteMovies(accountId: Int, sessionId: String) async throws -> FavoriteMoviesResponse {
+
+    func getFavoriteMovies(accountId: Int, sessionId: String) async throws -> FavoriteMediaResponse {
         guard let url = URL(string: "https://api.themoviedb.org/3/account/\(accountId)/favorite/movies") else {
             throw URLError(.badURL)
         }
-        
+
         var components = URLComponents(url: url, resolvingAgainstBaseURL: true)!
         let queryItems: [URLQueryItem] = [
             URLQueryItem(name: "page", value: "1"),
@@ -69,18 +69,18 @@ class FavoritesService {
 
         do {
             let (data, _) = try await URLSession.shared.data(for: request)
-            let response: FavoriteMoviesResponse = try JSONDecoder().decode(FavoriteMoviesResponse.self, from: data)
+            let response: FavoriteMediaResponse = try JSONDecoder().decode(FavoriteMediaResponse.self, from: data)
             return response
         } catch {
             throw error
         }
     }
-    
-    func getFavoriteShows(accountId: Int, sessionId: String) async throws -> FavoriteShowsResponse {
+
+    func getFavoriteShows(accountId: Int, sessionId: String) async throws -> FavoriteMediaResponse {
         guard let url = URL(string: "https://api.themoviedb.org/3/account/\(accountId)/favorite/tv") else {
             throw URLError(.badURL)
         }
-        
+
         var components = URLComponents(url: url, resolvingAgainstBaseURL: true)!
         let queryItems: [URLQueryItem] = [
             URLQueryItem(name: "page", value: "1"),
@@ -99,7 +99,7 @@ class FavoritesService {
 
         do {
             let (data, _) = try await URLSession.shared.data(for: request)
-            let response: FavoriteShowsResponse = try JSONDecoder().decode(FavoriteShowsResponse.self, from: data)
+            let response: FavoriteMediaResponse = try JSONDecoder().decode(FavoriteMediaResponse.self, from: data)
             return response
         } catch {
             throw error

@@ -9,47 +9,50 @@ import SwiftData
 import SwiftUI
 
 struct HomeView: View {
-    @State private var selectedTab = 0 // 0: Trending, 1: Favorites, 2: Search, 3: Profile
+    // MARK: - Properties
+
+    @State private var selectedTab = 0
     @ObservedObject var profileVM: ProfileViewModel
+
+    // MARK: - Body
 
     var body: some View {
         TabView(selection: $selectedTab) {
+            // Home/Trending
             TrendingView(profileVM: profileVM)
                 .tabItem {
-                    Label("Home", systemImage: "play.house.fill")
+                    Label("Home", systemImage: selectedTab == 0 ? "play.house.fill" : "play.house")
                 }
                 .tag(0)
-            FavoritesView(profileVM: profileVM)
+
+            // Unified Search (combines regular and AI search)
+            UnifiedSearchView(profileVM: profileVM)
                 .tabItem {
-                    Label("Favorites", systemImage: "star.fill")
+                    Label("Search", systemImage: selectedTab == 1 ? "magnifyingglass.circle.fill" : "magnifyingglass.circle")
                 }
                 .tag(1)
-            WatchlistView(profileVM: profileVM)
-                .tabItem {
-                    Label("Watchlist", systemImage: "tv.fill")
-                }
-                .tag(2)
-//            SearchView(profileVM: profileVM)
-//                .tabItem {
-//                    Label("Search", systemImage: "magnifyingglass")
-//                }
-//                .tag(3)
-            AiView()
-                .tabItem {
-                    Label("AI", systemImage: "sparkles")
-                }
-                .tag(3)
+
+            // Profile (includes Favorites and Watchlist)
             ProfileView(profileVM: profileVM)
                 .tabItem {
-                    Label("Profile", systemImage: "person.crop.circle.fill")
+                    Label("Profile", systemImage: selectedTab == 2 ? "person.crop.circle.fill" : "person.crop.circle")
                 }
-                .tag(4)
+                .tag(2)
         }
+        .preferredColorScheme(.dark)
+        .tint(AppTheme.Colors.accent)
         .task {
-            profileVM.loadSession()
-            if let savedSessionId = profileVM.session {
-                await profileVM.getProfile(sessionId: savedSessionId)
-            }
+            await initializeProfile()
+        }
+    }
+
+    // MARK: - Methods
+
+    @MainActor
+    private func initializeProfile() async {
+        profileVM.loadSession()
+        if let savedSessionId = profileVM.session {
+            await profileVM.getProfile(sessionId: savedSessionId)
         }
     }
 }

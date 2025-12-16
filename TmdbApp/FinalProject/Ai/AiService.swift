@@ -11,10 +11,10 @@ class AiService {
         let parameters = [
             "description": description,
         ] as [String: Any?]
-        
+
         let postBody = try JSONSerialization.data(withJSONObject: parameters, options: [])
 
-        guard let url = URL(string: "http://192.168.1.245:3000/tmdbcompanion/ai") else {
+        guard let url = URL(string: "http://\(Constants.AI_URL)/tmdbcompanion/ai") else {
             throw URLError(.badURL)
         }
         let components = URLComponents(url: url, resolvingAgainstBaseURL: true)!
@@ -24,7 +24,7 @@ class AiService {
         request.timeoutInterval = 10
         request.allHTTPHeaderFields = [
             "accept": "application/json",
-            "content-type": "application/json"
+            "content-type": "application/json",
         ]
         request.httpBody = postBody
 

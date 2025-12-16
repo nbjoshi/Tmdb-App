@@ -9,23 +9,41 @@ import Foundation
 import Observation
 
 @Observable
-class AiViewModel {
+final class AiViewModel {
     var description: String = ""
-    var aiResults: AiSearchResponse? = nil
-    private let service = AiService()
-    var errorMessage: String? = nil
-    
+    private(set) var aiResults: AiSearchResponse?
+    private(set) var isLoading = false
+    private(set) var errorMessage: String?
+
+    private let service: AiService
+
+    init(service: AiService = AiService()) {
+        self.service = service
+    }
+
+    @MainActor
     func getAiSearch() async {
-        if description.isEmpty {
+        guard !description.isEmpty else {
+            aiResults = nil
             return
         }
-        
+
+        isLoading = true
+        errorMessage = nil
+
+        defer { isLoading = false }
+
         do {
             let response = try await service.getAiSearch(description: description)
             aiResults = response
-            errorMessage = nil
         } catch {
-            errorMessage = "Failed to make search: \(error)"
+            errorMessage = "Failed to make AI search: \(error.localizedDescription)"
+            aiResults = nil
         }
+    }
+
+    func clearAiResults() {
+        aiResults = nil
+        errorMessage = nil
     }
 }

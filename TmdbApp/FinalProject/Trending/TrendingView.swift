@@ -8,11 +8,11 @@
 import SwiftData
 import SwiftUI
 
-enum TrendingTab {
-    case all
-    case movie
-    case tv
-    
+enum TrendingTab: String, CaseIterable {
+    case all = "All"
+    case movie = "Movies"
+    case tv = "TV Shows"
+
     var pathValue: String {
         switch self {
         case .all:
@@ -31,95 +31,188 @@ struct SelectedMedia: Identifiable {
 }
 
 struct TrendingView: View {
-    @State private var trendingVM = TrendingViewModel()
+    // MARK: - Properties
+
+    @State private var viewModel = TrendingViewModel()
     @State private var selectedTab: TrendingTab = .all
-    @State private var selectedMedia: SelectedMedia? = nil
+    @State private var selectedMedia: SelectedMedia?
     @ObservedObject var profileVM: ProfileViewModel
     @Environment(\.modelContext) private var modelContext
 
+    // MARK: - Body
+
     var body: some View {
         NavigationStack {
-            VStack {
-                HStack(spacing: 20) {
-                    Button(action: { selectedTab = .all }) {
-                        Text("All")
-                            .fontWeight(.semibold)
-                            .padding(.vertical, 8)
-                            .padding(.horizontal, 20)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(selectedTab == .all ? Color.accentColor.opacity(0.2) : Color.clear)
-                            )
-                    }
-                    Button(action: { selectedTab = .movie }) {
-                        Text("Movies")
-                            .fontWeight(.semibold)
-                            .padding(.vertical, 8)
-                            .padding(.horizontal, 20)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(selectedTab == .movie ? Color.accentColor.opacity(0.2) : Color.clear)
-                            )
-                    }
-                    Button(action: { selectedTab = .tv }) {
-                        Text("TV Shows")
-                            .fontWeight(.semibold)
-                            .padding(.vertical, 8)
-                            .padding(.horizontal, 20)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(selectedTab == .tv ? Color.accentColor.opacity(0.2) : Color.clear)
-                            )
-                    }
-                }
-                .padding()
-                .animation(.easeInOut(duration: 0.2), value: selectedTab)
+            ZStack {
+                // Background
+                AppTheme.Colors.background.ignoresSafeArea()
 
-                ScrollView(.vertical) {
-                    LazyVStack {
-                        ForEach(trendingVM.trending) { trending in
-                            TrendingCardView(trending: trending)
-                                .onTapGesture {
-                                    selectedMedia = SelectedMedia(id: trending.id, mediaType: trending.mediaType)
-                                }
-                            Divider()
-                        }
+                if viewModel.isLoading && viewModel.trending.isEmpty {
+                    LoadingView()
+                } else if let errorMessage = viewModel.errorMessage, viewModel.trending.isEmpty {
+                    errorView(message: errorMessage)
+                } else {
+                    contentView
+                }
+            }
+            .navigationTitle("Trending")
+            .navigationBarTitleDisplayMode(.large)
+            .preferredColorScheme(.dark)
+        }
+        .task {
+            await loadTrending()
+        }
+        .refreshable {
+            await loadTrending()
+        }
+        .onChange(of: selectedTab) { _, newTab in
+            Task {
+                await viewModel.fetchTrending(type: newTab)
+            }
+        }
+        .sheet(item: $selectedMedia) { media in
+            mediaDetailView(for: media)
+        }
+    }
+
+    // MARK: - Content Views
+
+    private var contentView: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(spacing: AppTheme.Spacing.xl) {
+                // Tab Picker
+                TabPicker(
+                    selection: Binding(
+                        get: { TrendingTab.allCases.firstIndex(of: selectedTab) ?? 0 },
+                        set: { selectedTab = TrendingTab.allCases[$0] }
+                    ),
+                    options: TrendingTab.allCases.map { $0.rawValue }
+                )
+                .padding(.horizontal, AppTheme.Spacing.md)
+                .padding(.top, AppTheme.Spacing.sm)
+
+                // Featured Hero Card
+                if let featured = viewModel.featuredMedia {
+                    HeroCard(media: featured) {
+                        selectedMedia = SelectedMedia(
+                            id: featured.id,
+                            mediaType: featured.mediaType.rawValue
+                        )
                     }
+                    .padding(.horizontal, AppTheme.Spacing.md)
+                }
+
+                // Content based on selected tab
+                switch selectedTab {
+                case .all:
+                    allContent
+                case .movie:
+                    moviesContent
+                case .tv:
+                    tvShowsContent
                 }
             }
-            .task {
-                await trendingVM.getTrending(type: selectedTab.pathValue)
-            }
-            .refreshable {
-                await trendingVM.getTrending(type: selectedTab.pathValue)
-            }
-            .onChange(of: selectedTab) { oldTab, newTab in
-                Task {
-                    await trendingVM.getTrending(type: newTab.pathValue)
-                }
-            }
-            .sheet(item: $selectedMedia) { media in
-                if media.mediaType == "movie" {
-                    MovieDetailCard(
-                        trendingId: media.id,
-                        sessionId: profileVM.session ?? "",
-                        accountId: profileVM.profile?.id ?? 0,
-                        isLoggedIn: profileVM.isLoggedIn,
+            .padding(.bottom, AppTheme.Spacing.xxl)
+        }
+    }
+
+    private var allContent: some View {
+        VStack(spacing: AppTheme.Spacing.xl) {
+            if !viewModel.movies.isEmpty {
+                HorizontalMediaRow(
+                    title: "Trending Movies",
+                    mediaItems: viewModel.movies
+                ) { media in
+                    selectedMedia = SelectedMedia(
+                        id: media.id,
+                        mediaType: media.mediaType.rawValue
                     )
                 }
-                else if media.mediaType == "tv" {
-                    ShowDetailCard(
-                        trendingId: media.id,
-                        sessionId: profileVM.session ?? "",
-                        accountId: profileVM.profile?.id ?? 0,
-                        isLoggedIn: profileVM.isLoggedIn,
+            }
+
+            if !viewModel.tvShows.isEmpty {
+                HorizontalMediaRow(
+                    title: "Trending TV Shows",
+                    mediaItems: viewModel.tvShows
+                ) { media in
+                    selectedMedia = SelectedMedia(
+                        id: media.id,
+                        mediaType: media.mediaType.rawValue
                     )
                 }
             }
         }
     }
+
+    private var moviesContent: some View {
+        MediaGrid(
+            mediaItems: viewModel.movies,
+            onMediaTap: { media in
+                selectedMedia = SelectedMedia(
+                    id: media.id,
+                    mediaType: media.mediaType.rawValue
+                )
+            }
+        )
+    }
+
+    private var tvShowsContent: some View {
+        MediaGrid(
+            mediaItems: viewModel.tvShows,
+            onMediaTap: { media in
+                selectedMedia = SelectedMedia(
+                    id: media.id,
+                    mediaType: media.mediaType.rawValue
+                )
+            }
+        )
+    }
+
+    // MARK: - Helper Views
+
+    private func errorView(message: String) -> some View {
+        EmptyStateView(
+            icon: "exclamationmark.triangle",
+            title: "Oops!",
+            message: message,
+            actionTitle: "Try Again"
+        ) {
+            Task {
+                await loadTrending()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func mediaDetailView(for media: SelectedMedia) -> some View {
+        if media.mediaType == MediaType.movie.rawValue {
+            MovieDetailCard(
+                trendingId: media.id,
+                sessionId: profileVM.session ?? "",
+                accountId: profileVM.profile?.id ?? 0,
+                isLoggedIn: profileVM.isLoggedIn
+            )
+        } else if media.mediaType == MediaType.tv.rawValue {
+            ShowDetailCard(
+                trendingId: media.id,
+                sessionId: profileVM.session ?? "",
+                accountId: profileVM.profile?.id ?? 0,
+                isLoggedIn: profileVM.isLoggedIn
+            )
+        }
+    }
+
+    // MARK: - Methods
+
+    @MainActor
+    private func loadTrending() async {
+        await viewModel.fetchTrending(type: selectedTab)
+    }
 }
 
-// #Preview {
-//    TrendingView()
-// }
+// MARK: - Preview
+
+#Preview {
+    TrendingView(profileVM: ProfileViewModel())
+        .modelContainer(for: RecentSearch.self)
+}

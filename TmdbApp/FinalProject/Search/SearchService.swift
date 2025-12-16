@@ -12,7 +12,7 @@ class SearchService {
         guard let url = URL(string: "https://api.themoviedb.org/3/search/multi") else {
             throw URLError(.badURL)
         }
-        
+
         var components = URLComponents(url: url, resolvingAgainstBaseURL: true)!
         let queryItems: [URLQueryItem] = [
             URLQueryItem(name: "query", value: query),

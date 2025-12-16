@@ -7,181 +7,176 @@
 
 import SwiftUI
 
-enum FavoritesTab {
-    case movie
-    case tv
+enum FavoritesTab: String, CaseIterable {
+    case movie = "Movies"
+    case tv = "TV Shows"
 }
 
 struct FavoritesView: View {
+    // MARK: - Properties
+
     @ObservedObject var profileVM: ProfileViewModel
-    @State private var favoritesVM = FavoritesViewModel()
+    @State private var viewModel = FavoritesViewModel()
     @State private var selectedTab: FavoritesTab = .movie
-    @State private var selectedMedia: SelectedMedia? = nil
+    @State private var selectedMedia: SelectedMedia?
+
+    // MARK: - Body
 
     var body: some View {
-        if profileVM.isLoggedIn {
-            NavigationStack {
-                VStack {
-                    HStack(spacing: 20) {
-                        Button(action: { selectedTab = .movie }) {
-                            Text("Movies")
-                                .fontWeight(.semibold)
-                                .padding(.vertical, 8)
-                                .padding(.horizontal, 20)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(selectedTab == .movie ? Color.accentColor.opacity(0.2) : Color.clear)
-                                )
-                        }
-                        Button(action: { selectedTab = .tv }) {
-                            Text("TV Shows")
-                                .fontWeight(.semibold)
-                                .padding(.vertical, 8)
-                                .padding(.horizontal, 20)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(selectedTab == .tv ? Color.accentColor.opacity(0.2) : Color.clear)
-                                )
-                        }
-                    }
-                    .padding()
-                    .animation(.easeInOut(duration: 0.2), value: selectedTab)
-
-                    ScrollView(.vertical) {
-                        LazyVStack {
-                            if selectedTab == .movie {
-                                ForEach(favoritesVM.favoriteMovies) { movie in
-                                    FavoritesCardView(title: movie.title, posterPath: movie.posterPath)
-                                        .onTapGesture {
-                                            selectedMedia = SelectedMedia(id: movie.id, mediaType: "movie")
-                                        }
-                                    Divider()
-                                }
-                            } else {
-                                ForEach(favoritesVM.favoriteShows) { show in
-                                    FavoritesCardView(title: show.name, posterPath: show.posterPath)
-                                        .onTapGesture {
-                                            selectedMedia = SelectedMedia(id: show.id, mediaType: "tv")
-                                        }
-                                    Divider()
-                                }
-                            }
-                        }
-                        .padding(.horizontal)
-                    }
-                    .overlay {
-                        if selectedTab == .movie && favoritesVM.favoriteMovies.isEmpty {
-                            VStack {
-                                Image(systemName: "eye.slash.fill")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .foregroundStyle(.secondary)
-                                    .frame(width: 80, height: 80)
-                                Text("No favorite movies yet.")
-                                    .font(.headline)
-                                Text("Begin adding movies to your favorites by searching for them or exploring the trending page")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .multilineTextAlignment(.center)
-                            }
-                            .padding()
-                        } else if selectedTab == .tv && favoritesVM.favoriteShows.isEmpty {
-                            VStack {
-                                Image(systemName: "eye.slash.fill")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .foregroundStyle(.secondary)
-                                    .frame(width: 80, height: 80)
-                                Text("No favorite shows yet.")
-                                    .font(.headline)
-                                Text("Begin adding shows to your favorites by searching for them or exploring the trending page")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .multilineTextAlignment(.center)
-                            }
-                            .padding()
-                        }
-                    }
-                }
-            }
-            .task {
-                if selectedTab == .movie {
-                    await favoritesVM.getFavoriteMovies(accountId: profileVM.profile?.id ?? 0, sessionId: profileVM.session ?? "")
-                } else {
-                    await favoritesVM.getFavoriteShows(accountId: profileVM.profile?.id ?? 0, sessionId: profileVM.session ?? "")
-                }
-            }
-            .onAppear {
-                Task {
-                    if selectedTab == .movie {
-                        await favoritesVM.getFavoriteMovies(accountId: profileVM.profile?.id ?? 0, sessionId: profileVM.session ?? "")
-                    } else {
-                        await favoritesVM.getFavoriteShows(accountId: profileVM.profile?.id ?? 0, sessionId: profileVM.session ?? "")
-                    }
-                }
-            }
-            .refreshable {
-                if selectedTab == .movie {
-                    await favoritesVM.getFavoriteMovies(accountId: profileVM.profile?.id ?? 0, sessionId: profileVM.session ?? "")
-                } else {
-                    await favoritesVM.getFavoriteShows(accountId: profileVM.profile?.id ?? 0, sessionId: profileVM.session ?? "")
-                }
-            }
-            .onChange(of: selectedTab) { oldTab, newTab in
-                Task {
-                    if newTab == .movie {
-                        await favoritesVM.getFavoriteMovies(accountId: profileVM.profile?.id ?? 0, sessionId: profileVM.session ?? "")
-                    } else {
-                        await favoritesVM.getFavoriteShows(accountId: profileVM.profile?.id ?? 0, sessionId: profileVM.session ?? "")
-                    }
-                }
-            }
-            .sheet(item: $selectedMedia) { media in
-                if media.mediaType == "movie" {
-                    MovieDetailCard(
-                        trendingId: media.id,
-                        sessionId: profileVM.session ?? "",
-                        accountId: profileVM.profile?.id ?? 0,
-                        isLoggedIn: profileVM.isLoggedIn,
-                    )
-                }
-                else if media.mediaType == "tv" {
-                    ShowDetailCard(
-                        trendingId: media.id,
-                        sessionId: profileVM.session ?? "",
-                        accountId: profileVM.profile?.id ?? 0,
-                        isLoggedIn: profileVM.isLoggedIn,
-                    )
-                }
+        Group {
+            if profileVM.isLoggedIn {
+                loggedInView
+            } else {
+                loggedOutView
             }
         }
-        else {
-            VStack(spacing: 24) {
-                Spacer()
-                
-                Image(systemName: "heart.slash.fill")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 100, height: 100)
-                    .foregroundColor(.secondary)
-                
-                Text("No Favorites Yet")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                
-                Text("Log in to save your favorite movies and TV shows, and view them here anytime.")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
-                
-                Spacer()
+        .preferredColorScheme(.dark)
+    }
+
+    // MARK: - Logged In View
+
+    private var loggedInView: some View {
+        NavigationStack {
+            ZStack {
+                AppTheme.Colors.background.ignoresSafeArea()
+
+                if viewModel.isLoading && currentItems.isEmpty {
+                    LoadingView()
+                } else {
+                    contentView
+                }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .navigationTitle("Favorites")
+            .navigationBarTitleDisplayMode(.large)
+        }
+        .task {
+            await loadFavorites()
+        }
+        .refreshable {
+            await loadFavorites()
+        }
+        .onChange(of: selectedTab) { _, _ in
+            Task {
+                await loadFavorites()
+            }
+        }
+        .sheet(item: $selectedMedia) { media in
+            mediaDetailView(for: media)
+        }
+    }
+
+    // MARK: - Content View
+
+    private var contentView: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(spacing: AppTheme.Spacing.xl) {
+                // Tab Picker
+                TabPicker(
+                    selection: Binding(
+                        get: { FavoritesTab.allCases.firstIndex(of: selectedTab) ?? 0 },
+                        set: { selectedTab = FavoritesTab.allCases[$0] }
+                    ),
+                    options: FavoritesTab.allCases.map { $0.rawValue }
+                )
+                .padding(.horizontal, AppTheme.Spacing.md)
+                .padding(.top, AppTheme.Spacing.sm)
+
+                // Content Grid
+                if currentItems.isEmpty {
+                    emptyStateView
+                } else {
+                    MediaGrid(
+                        mediaItems: currentMediaItems,
+                        onMediaTap: { media in
+                            selectedMedia = SelectedMedia(
+                                id: media.id,
+                                mediaType: media.mediaType.rawValue
+                            )
+                        }
+                    )
+                }
+            }
+            .padding(.bottom, AppTheme.Spacing.xxl)
+        }
+    }
+
+    // MARK: - Logged Out View
+
+    private var loggedOutView: some View {
+        EmptyStateView(
+            icon: "star.fill",
+            title: "No Favorites Yet",
+            message: "Log in to save your favorite movies and TV shows, and view them here anytime."
+        )
+    }
+
+    // MARK: - Helper Views
+
+    private var emptyStateView: some View {
+        EmptyStateView(
+            icon: "star.slash.fill",
+            title: selectedTab == .movie ? "No Favorite Movies" : "No Favorite Shows",
+            message: "Begin adding \(selectedTab.rawValue.lowercased()) to your favorites by searching for them or exploring the trending page."
+        )
+        .padding(.top, AppTheme.Spacing.xxl)
+    }
+
+    @ViewBuilder
+    private func mediaDetailView(for media: SelectedMedia) -> some View {
+        if media.mediaType == MediaType.movie.rawValue {
+            MovieDetailCard(
+                trendingId: media.id,
+                sessionId: profileVM.session ?? "",
+                accountId: profileVM.profile?.id ?? 0,
+                isLoggedIn: profileVM.isLoggedIn
+            )
+        } else if media.mediaType == MediaType.tv.rawValue {
+            ShowDetailCard(
+                trendingId: media.id,
+                sessionId: profileVM.session ?? "",
+                accountId: profileVM.profile?.id ?? 0,
+                isLoggedIn: profileVM.isLoggedIn
+            )
+        }
+    }
+
+    // MARK: - Computed Properties
+
+    private var currentItems: [FavoriteMedia] {
+        selectedTab == .movie ? viewModel.favoriteMovies : viewModel.favoriteShows
+    }
+
+    private var currentMediaItems: [Media] {
+        currentItems.map { favorite in
+            Media(
+                id: favorite.id,
+                mediaType: favorite.mediaType,
+                posterPath: favorite.posterPath,
+                profilePath: nil,
+                title: favorite.title,
+                name: favorite.name
+            )
+        }
+    }
+
+    // MARK: - Methods
+
+    @MainActor
+    private func loadFavorites() async {
+        guard let accountId = profileVM.profile?.id,
+              let sessionId = profileVM.session else { return }
+
+        switch selectedTab {
+        case .movie:
+            await viewModel.fetchFavoriteMovies(accountId: accountId, sessionId: sessionId)
+        case .tv:
+            await viewModel.fetchFavoriteShows(accountId: accountId, sessionId: sessionId)
         }
     }
 }
 
-// #Preview {
-//    FavoritesView()
-// }
+// MARK: - Preview
+
+#Preview {
+    FavoritesView(profileVM: ProfileViewModel())
+}

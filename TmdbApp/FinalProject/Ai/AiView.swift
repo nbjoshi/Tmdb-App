@@ -1,5 +1,5 @@
 //
-//  SwiftUIView.swift
+//  AiView.swift
 //  FinalProject
 //
 //  Created by Neel Joshi on 12/13/25.
@@ -10,7 +10,7 @@ import SwiftUI
 struct AiView: View {
     @State var description: String = ""
     @State var aiVM = AiViewModel()
-    
+
     var body: some View {
         VStack {
             TextField("description", text: $description)
@@ -51,6 +51,6 @@ struct AiView: View {
     }
 }
 
-//#Preview {
+// #Preview {
 //    SwiftUIView()
-//}
+// }

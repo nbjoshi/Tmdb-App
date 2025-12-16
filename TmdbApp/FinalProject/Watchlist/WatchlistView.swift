@@ -7,181 +7,176 @@
 
 import SwiftUI
 
-enum WatchlistTab {
-    case movie
-    case tv
+enum WatchlistTab: String, CaseIterable {
+    case movie = "Movies"
+    case tv = "TV Shows"
 }
 
 struct WatchlistView: View {
+    // MARK: - Properties
+
     @ObservedObject var profileVM: ProfileViewModel
-    @State private var watchlistVM = WatchlistViewModel()
+    @State private var viewModel = WatchlistViewModel()
     @State private var selectedTab: WatchlistTab = .movie
-    @State private var selectedMedia: SelectedMedia? = nil
+    @State private var selectedMedia: SelectedMedia?
+
+    // MARK: - Body
 
     var body: some View {
-        if profileVM.isLoggedIn {
-            NavigationStack {
-                VStack {
-                    HStack(spacing: 20) {
-                        Button(action: { selectedTab = .movie }) {
-                            Text("Movies")
-                                .fontWeight(.semibold)
-                                .padding(.vertical, 8)
-                                .padding(.horizontal, 20)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(selectedTab == .movie ? Color.accentColor.opacity(0.2) : Color.clear)
-                                )
-                        }
-                        Button(action: { selectedTab = .tv }) {
-                            Text("TV Shows")
-                                .fontWeight(.semibold)
-                                .padding(.vertical, 8)
-                                .padding(.horizontal, 20)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(selectedTab == .tv ? Color.accentColor.opacity(0.2) : Color.clear)
-                                )
-                        }
-                    }
-                    .padding()
-                    .animation(.easeInOut(duration: 0.2), value: selectedTab)
-
-                    ScrollView(.vertical) {
-                        LazyVStack {
-                            if selectedTab == .movie {
-                                ForEach(watchlistVM.watchlistMovies) { movie in
-                                    WatchlistCardView(title: movie.title, posterPath: movie.posterPath)
-                                        .onTapGesture {
-                                            selectedMedia = SelectedMedia(id: movie.id, mediaType: "movie")
-                                        }
-                                    Divider()
-                                }
-                            } else {
-                                ForEach(watchlistVM.watchlistShows) { show in
-                                    WatchlistCardView(title: show.name, posterPath: show.posterPath)
-                                        .onTapGesture {
-                                            selectedMedia = SelectedMedia(id: show.id, mediaType: "tv")
-                                        }
-                                    Divider()
-                                }
-                            }
-                        }
-                        .padding(.horizontal)
-                    }
-                    .overlay {
-                        if selectedTab == .movie && watchlistVM.watchlistMovies.isEmpty {
-                            VStack {
-                                Image(systemName: "eye.slash.fill")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .foregroundStyle(.secondary)
-                                    .frame(width: 80, height: 80)
-                                Text("No movies in your watchlist yet.")
-                                    .font(.headline)
-                                Text("Begin adding movies to your watchlist by searching for them or exploring the trending page")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .multilineTextAlignment(.center)
-                            }
-                            .padding()
-                        } else if selectedTab == .tv && watchlistVM.watchlistShows.isEmpty {
-                            VStack {
-                                Image(systemName: "eye.slash.fill")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .foregroundStyle(.secondary)
-                                    .frame(width: 80, height: 80)
-                                Text("No shows in your watchlist yet.")
-                                    .font(.headline)
-                                Text("Begin adding shows to your watchlist by searching for them or exploring the trending page")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .multilineTextAlignment(.center)
-                            }
-                            .padding()
-                        }
-                    }
-                }
-            }
-            .task {
-                if selectedTab == .movie {
-                    await watchlistVM.getWatchlistMovies(accountId: profileVM.profile?.id ?? 0, sessionId: profileVM.session ?? "")
-                } else {
-                    await watchlistVM.getWatchlistShows(accountId: profileVM.profile?.id ?? 0, sessionId: profileVM.session ?? "")
-                }
-            }
-            .onAppear {
-                Task {
-                    if selectedTab == .movie {
-                        await watchlistVM.getWatchlistMovies(accountId: profileVM.profile?.id ?? 0, sessionId: profileVM.session ?? "")
-                    } else {
-                        await watchlistVM.getWatchlistShows(accountId: profileVM.profile?.id ?? 0, sessionId: profileVM.session ?? "")
-                    }
-                }
-            }
-            .refreshable {
-                if selectedTab == .movie {
-                    await watchlistVM.getWatchlistMovies(accountId: profileVM.profile?.id ?? 0, sessionId: profileVM.session ?? "")
-                } else {
-                    await watchlistVM.getWatchlistShows(accountId: profileVM.profile?.id ?? 0, sessionId: profileVM.session ?? "")
-                }
-            }
-            .onChange(of: selectedTab) { oldTab, newTab in
-                Task {
-                    if newTab == .movie {
-                        await watchlistVM.getWatchlistMovies(accountId: profileVM.profile?.id ?? 0, sessionId: profileVM.session ?? "")
-                    } else {
-                        await watchlistVM.getWatchlistShows(accountId: profileVM.profile?.id ?? 0, sessionId: profileVM.session ?? "")
-                    }
-                }
-            }
-            .sheet(item: $selectedMedia) { media in
-                if media.mediaType == "movie" {
-                    MovieDetailCard(
-                        trendingId: media.id,
-                        sessionId: profileVM.session ?? "",
-                        accountId: profileVM.profile?.id ?? 0,
-                        isLoggedIn: profileVM.isLoggedIn,
-                    )
-                }
-                else if media.mediaType == "tv" {
-                    ShowDetailCard(
-                        trendingId: media.id,
-                        sessionId: profileVM.session ?? "",
-                        accountId: profileVM.profile?.id ?? 0,
-                        isLoggedIn: profileVM.isLoggedIn,
-                    )
-                }
+        Group {
+            if profileVM.isLoggedIn {
+                loggedInView
+            } else {
+                loggedOutView
             }
         }
-        else {
-            VStack(spacing: 24) {
-                Spacer()
-                
-                Image(systemName: "heart.slash.fill")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 100, height: 100)
-                    .foregroundColor(.secondary)
-                
-                Text("No Favorites Yet")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                
-                Text("Log in to save your favorite movies and TV shows, and view them here anytime.")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
-                
-                Spacer()
+        .preferredColorScheme(.dark)
+    }
+
+    // MARK: - Logged In View
+
+    private var loggedInView: some View {
+        NavigationStack {
+            ZStack {
+                AppTheme.Colors.background.ignoresSafeArea()
+
+                if viewModel.isLoading && currentItems.isEmpty {
+                    LoadingView()
+                } else {
+                    contentView
+                }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .navigationTitle("Watchlist")
+            .navigationBarTitleDisplayMode(.large)
+        }
+        .task {
+            await loadWatchlist()
+        }
+        .refreshable {
+            await loadWatchlist()
+        }
+        .onChange(of: selectedTab) { _, _ in
+            Task {
+                await loadWatchlist()
+            }
+        }
+        .sheet(item: $selectedMedia) { media in
+            mediaDetailView(for: media)
+        }
+    }
+
+    // MARK: - Content View
+
+    private var contentView: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(spacing: AppTheme.Spacing.xl) {
+                // Tab Picker
+                TabPicker(
+                    selection: Binding(
+                        get: { WatchlistTab.allCases.firstIndex(of: selectedTab) ?? 0 },
+                        set: { selectedTab = WatchlistTab.allCases[$0] }
+                    ),
+                    options: WatchlistTab.allCases.map { $0.rawValue }
+                )
+                .padding(.horizontal, AppTheme.Spacing.md)
+                .padding(.top, AppTheme.Spacing.sm)
+
+                // Content Grid
+                if currentItems.isEmpty {
+                    emptyStateView
+                } else {
+                    MediaGrid(
+                        mediaItems: currentMediaItems,
+                        onMediaTap: { media in
+                            selectedMedia = SelectedMedia(
+                                id: media.id,
+                                mediaType: media.mediaType.rawValue
+                            )
+                        }
+                    )
+                }
+            }
+            .padding(.bottom, AppTheme.Spacing.xxl)
+        }
+    }
+
+    // MARK: - Logged Out View
+
+    private var loggedOutView: some View {
+        EmptyStateView(
+            icon: "tv.fill",
+            title: "No Watchlist Yet",
+            message: "Log in to save movies and TV shows to your watchlist, and view them here anytime."
+        )
+    }
+
+    // MARK: - Helper Views
+
+    private var emptyStateView: some View {
+        EmptyStateView(
+            icon: "tv.slash.fill",
+            title: selectedTab == .movie ? "No Movies in Watchlist" : "No Shows in Watchlist",
+            message: "Begin adding \(selectedTab.rawValue.lowercased()) to your watchlist by searching for them or exploring the trending page."
+        )
+        .padding(.top, AppTheme.Spacing.xxl)
+    }
+
+    @ViewBuilder
+    private func mediaDetailView(for media: SelectedMedia) -> some View {
+        if media.mediaType == MediaType.movie.rawValue {
+            MovieDetailCard(
+                trendingId: media.id,
+                sessionId: profileVM.session ?? "",
+                accountId: profileVM.profile?.id ?? 0,
+                isLoggedIn: profileVM.isLoggedIn
+            )
+        } else if media.mediaType == MediaType.tv.rawValue {
+            ShowDetailCard(
+                trendingId: media.id,
+                sessionId: profileVM.session ?? "",
+                accountId: profileVM.profile?.id ?? 0,
+                isLoggedIn: profileVM.isLoggedIn
+            )
+        }
+    }
+
+    // MARK: - Computed Properties
+
+    private var currentItems: [WatchlistMedia] {
+        selectedTab == .movie ? viewModel.watchlistMovies : viewModel.watchlistShows
+    }
+
+    private var currentMediaItems: [Media] {
+        currentItems.map { watchlist in
+            Media(
+                id: watchlist.id,
+                mediaType: watchlist.mediaType,
+                posterPath: watchlist.posterPath,
+                profilePath: nil,
+                title: watchlist.title,
+                name: watchlist.name
+            )
+        }
+    }
+
+    // MARK: - Methods
+
+    @MainActor
+    private func loadWatchlist() async {
+        guard let accountId = profileVM.profile?.id,
+              let sessionId = profileVM.session else { return }
+
+        switch selectedTab {
+        case .movie:
+            await viewModel.fetchWatchlistMovies(accountId: accountId, sessionId: sessionId)
+        case .tv:
+            await viewModel.fetchWatchlistShows(accountId: accountId, sessionId: sessionId)
         }
     }
 }
 
-// #Preview {
-//    WatchlistView()
-// }
+// MARK: - Preview
+
+#Preview {
+    WatchlistView(profileVM: ProfileViewModel())
+}
